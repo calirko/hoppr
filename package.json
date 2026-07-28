@@ -1,0 +1,19 @@
+{
+  "name": "hoppr",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "bun --cwd apps/web run dev",
+    "dev:server": "bun --cwd apps/server run dev",
+    "build:web": "bun --cwd apps/web run build",
+    "lint": "bun --cwd apps/web run lint",
+    "db:generate": "bun --cwd apps/server run db:generate",
+    "db:migrate": "bun --cwd apps/server run db:migrate",
+    "db:studio": "bun --cwd apps/server run db:studio"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6"
+  }
+}
