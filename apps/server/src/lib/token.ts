@@ -12,7 +12,7 @@ export interface TokenPayload {
 }
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-const EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
+export const EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 export const Token = {
   nowInSeconds(): number {

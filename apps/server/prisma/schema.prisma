@@ -14,13 +14,15 @@ enum ClientType {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
+  id           String        @id @default(cuid())
+  email        String        @unique
   passwordHash String
   name         String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   connections  Connection[]
+  sessions     UserSession[]
+  apiKeys      ApiKey[]
 }
 
 model Connection {
@@ -40,6 +42,32 @@ model Connection {
   lastLaunchedAt DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
 }

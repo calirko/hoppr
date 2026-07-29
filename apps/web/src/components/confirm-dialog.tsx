@@ -1,3 +1,4 @@
+import { CheckIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -7,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CheckIcon } from '@phosphor-icons/react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -37,7 +37,7 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter showCloseButton>
           <Button variant="destructive" disabled={loading} onClick={onConfirm}>
-            <CheckIcon/>
+            <CheckIcon />
             {confirmLabel}
           </Button>
         </DialogFooter>

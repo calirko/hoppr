@@ -1,3 +1,4 @@
+import { FloppyDiskIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import { InputPassword } from '@/components/ui/input-password';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import type { User } from '@/lib/types';
-import { FloppyDiskIcon } from '@phosphor-icons/react';
 
 interface UserDialogProps {
   open: boolean;
@@ -135,7 +135,7 @@ export function UserDialog({
         </form>
         <DialogFooter showCloseButton>
           <Button type="submit" form="user-form" disabled={loading}>
-            <FloppyDiskIcon/>
+            <FloppyDiskIcon />
             {isEdit ? 'Save changes' : 'Create user'}
           </Button>
         </DialogFooter>

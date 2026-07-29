@@ -4,6 +4,7 @@ import { Token, type TokenPayload } from './token.ts';
 
 type Variables = {
   user: TokenPayload['user'];
+  token: string;
 };
 
 export const auth = async (
@@ -19,6 +20,11 @@ export const auth = async (
 
   try {
     const payload = await Token.verify(token);
+    const session = await prisma.userSession.findUnique({ where: { token } });
+    if (!session || session.expiresAt < new Date()) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.user.id },
       select: { id: true, name: true, email: true },
@@ -29,6 +35,7 @@ export const auth = async (
     }
 
     c.set('user', user);
+    c.set('token', token);
     await next();
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);

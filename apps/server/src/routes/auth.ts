@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { auth } from '../lib/auth.ts';
 import { Password } from '../lib/password.ts';
 import { prisma } from '../lib/prisma.ts';
-import { Token } from '../lib/token.ts';
+import { EXPIRATION_SECONDS, Token } from '../lib/token.ts';
 
 export const authRoutes = new Hono();
 
@@ -29,9 +29,24 @@ authRoutes.post('/login', async (c) => {
     email: user.email,
   });
 
+  await prisma.userSession.create({
+    data: {
+      userId: user.id,
+      token,
+      userAgent: c.req.header('user-agent') ?? null,
+      ip: c.req.header('x-forwarded-for') ?? null,
+      expiresAt: new Date(Date.now() + EXPIRATION_SECONDS * 1000),
+    },
+  });
+
   return c.json({ token });
 });
 
 authRoutes.get('/me', auth, (c) => {
   return c.json({ user: c.get('user') });
+});
+
+authRoutes.post('/logout', auth, async (c) => {
+  await prisma.userSession.deleteMany({ where: { token: c.get('token') } });
+  return c.body(null, 204);
 });

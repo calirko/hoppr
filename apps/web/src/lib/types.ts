@@ -33,3 +33,20 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Session {
+  id: string;
+  userAgent: string | null;
+  ip: string | null;
+  isCurrent: boolean;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
