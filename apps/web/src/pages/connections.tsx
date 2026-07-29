@@ -72,6 +72,8 @@ export default function ConnectionsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [connectPulseKey, setConnectPulseKey] = useState(0);
+  const [connectPulseActive, setConnectPulseActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const hasAppliedHighlightRef = useRef(false);
@@ -222,6 +224,8 @@ export default function ConnectionsPage() {
   }
 
   async function connect(connection: Connection) {
+    setConnectPulseKey((key) => key + 1);
+    setConnectPulseActive(true);
     if (getAutoCopyPassword() && connection.password) {
       try {
         await navigator.clipboard.writeText(connection.password);
@@ -263,6 +267,14 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {connectPulseActive && (
+        <div
+          key={connectPulseKey}
+          aria-hidden
+          className="connect-blink-overlay animate-connect-blink"
+          onAnimationEnd={() => setConnectPulseActive(false)}
+        />
+      )}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl">Connections</h1>

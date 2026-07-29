@@ -136,6 +136,50 @@
   animation: highlight-blink 1050ms ease-in-out 2;
 }
 
+.connect-blink-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-image: linear-gradient(
+    to top,
+    color-mix(in oklch, white 55%, transparent) 0%,
+    color-mix(in oklch, white 35%, transparent) 40%,
+    color-mix(in oklch, white 10%, transparent) 70%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 1px, transparent 1px);
+  mask-image: radial-gradient(circle, #000 1px, transparent 1px);
+  -webkit-mask-size: 20px 20px;
+  mask-size: 20px 20px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+@keyframes connect-blink-sweep {
+  0% {
+    background-size: 100% 0%;
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.8;
+  }
+  42% {
+    background-size: 100% 50%;
+    opacity: 0.8;
+  }
+  100% {
+    background-size: 100% 55%;
+    opacity: 0;
+  }
+}
+
+.animate-connect-blink {
+  animation: connect-blink-sweep 700ms ease-out forwards;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
