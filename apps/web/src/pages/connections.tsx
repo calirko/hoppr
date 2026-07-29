@@ -72,6 +72,7 @@ export default function ConnectionsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [connectPulseKey, setConnectPulseKey] = useState(0);
   const [connectPulseActive, setConnectPulseActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -87,32 +88,6 @@ export default function ConnectionsPage() {
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
   }, [search]);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (isAnyDialogOpen) return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-
-      const target = event.target as HTMLElement | null;
-      const isEditable =
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable);
-      if (isEditable) return;
-
-      if (event.key === 'Escape') return;
-
-      if (event.key.length === 1) {
-        searchInputRef.current?.focus();
-      } else if (event.key === 'Backspace') {
-        searchInputRef.current?.focus();
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isAnyDialogOpen]);
 
   const filteredConnections = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
@@ -138,6 +113,69 @@ export default function ConnectionsPage() {
       a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
     );
   }, [connections, debouncedSearch]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: connect is stable in practice and re-defining it every render would thrash this listener
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (isAnyDialogOpen) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (filteredConnections.length === 0) return;
+        event.preventDefault();
+        setSelectedIndex((current) => {
+          if (current === -1) return 0;
+          const delta = event.key === 'ArrowDown' ? 1 : -1;
+          return (
+            (current + delta + filteredConnections.length) %
+            filteredConnections.length
+          );
+        });
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (selectedIndex < 0 || selectedIndex >= filteredConnections.length)
+          return;
+        const target = event.target as HTMLElement | null;
+        if (target && target.tagName !== 'INPUT') return;
+        event.preventDefault();
+        connect(filteredConnections[selectedIndex]);
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      if (isEditable) return;
+
+      if (event.key === 'Escape') return;
+
+      if (event.key.length === 1) {
+        searchInputRef.current?.focus();
+      } else if (event.key === 'Backspace') {
+        searchInputRef.current?.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isAnyDialogOpen, filteredConnections, selectedIndex]);
+
+  useEffect(() => {
+    setSelectedIndex(debouncedSearch.trim() ? 0 : -1);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (selectedIndex < 0) return;
+    const connection = filteredConnections[selectedIndex];
+    if (!connection) return;
+    const card = cardRefs.current.get(connection.id);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedIndex, filteredConnections]);
 
   async function load() {
     setLoading(true);
@@ -324,8 +362,9 @@ export default function ConnectionsPage() {
         </button>
 
         {!loading &&
-          filteredConnections.map((connection) => {
+          filteredConnections.map((connection, index) => {
             const TypeIcon = TYPE_ICON[connection.type];
+            const isSelected = index === selectedIndex;
             return (
               <Card
                 key={connection.id}
@@ -333,11 +372,16 @@ export default function ConnectionsPage() {
                   if (el) cardRefs.current.set(connection.id, el);
                   else cardRefs.current.delete(connection.id);
                 }}
-                className={
+                onMouseEnter={() => setSelectedIndex(index)}
+                className={[
+                  'min-h-40',
                   highlightedId === connection.id
-                    ? 'min-h-40 animate-highlight-blink'
-                    : 'min-h-40'
-                }
+                    ? 'animate-highlight-blink'
+                    : '',
+                  isSelected ? 'ring-2 ring-primary' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <CardHeader>
                   <CardTitle className="truncate">{connection.label}</CardTitle>
