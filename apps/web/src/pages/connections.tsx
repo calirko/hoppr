@@ -3,14 +3,16 @@ import {
   DesktopIcon,
   DesktopTowerIcon,
   DotsThreeIcon,
+  MagnifyingGlassIcon,
   MonitorIcon,
   PencilIcon,
   PlugIcon,
   PlusIcon,
   ShieldCheckIcon,
   TrashIcon,
+  XIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionDialog } from '@/components/connection-dialog';
@@ -29,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +41,8 @@ import { VpnDialog } from '@/components/vpn-dialog';
 import { apiFetch } from '@/lib/api';
 import { launchConnection } from '@/lib/launch';
 import type { Connection } from '@/lib/types';
+
+const SEARCH_DEBOUNCE_MS = 200;
 
 const TYPE_LABEL: Record<Connection['type'], string> = {
   ANYDESK: 'AnyDesk',
@@ -58,6 +63,64 @@ export default function ConnectionsPage() {
   const [editing, setEditing] = useState<Connection | null>(null);
   const [deleting, setDeleting] = useState<Connection | null>(null);
   const [viewingVpn, setViewingVpn] = useState<Connection | null>(null);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const isAnyDialogOpen =
+    dialogOpen || Boolean(deleting) || Boolean(viewingVpn);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (isAnyDialogOpen) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      if (isEditable) return;
+
+      if (event.key === 'Escape') return;
+
+      if (event.key.length === 1) {
+        searchInputRef.current?.focus();
+      } else if (event.key === 'Backspace') {
+        searchInputRef.current?.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isAnyDialogOpen]);
+
+  const filteredConnections = useMemo(() => {
+    const query = debouncedSearch.trim().toLowerCase();
+    if (!query) return connections;
+    return connections.filter((connection) => {
+      const haystack = [
+        connection.label,
+        connection.host,
+        connection.username,
+        connection.domain,
+        connection.notes,
+        connection.port?.toString(),
+        TYPE_LABEL[connection.type],
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [connections, debouncedSearch]);
 
   async function load() {
     setLoading(true);
@@ -135,12 +198,37 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl">Connections</h1>
           <p className="text-sm text-muted-foreground">
             Saved remote-access endpoints you can launch.
           </p>
+        </div>
+        <div className="relative w-full max-w-xs">
+          <MagnifyingGlassIcon
+            size={16}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            ref={searchInputRef}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search connections..."
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                searchInputRef.current?.focus();
+              }}
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <XIcon size={16} />
+            </button>
+          )}
         </div>
         {/*<Button onClick={openCreate}>
           <PlusIcon />
@@ -159,7 +247,7 @@ export default function ConnectionsPage() {
         </button>
 
         {!loading &&
-          connections.map((connection) => {
+          filteredConnections.map((connection) => {
             const TypeIcon = TYPE_ICON[connection.type];
             return (
               <Card key={connection.id} className="min-h-40">
