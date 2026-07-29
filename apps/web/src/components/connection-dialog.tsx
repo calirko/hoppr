@@ -64,6 +64,7 @@ export function ConnectionDialog({
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(connection);
+  const isRdp = form.type === 'RDP';
 
   useEffect(() => {
     if (!open) return;
@@ -114,7 +115,7 @@ export function ConnectionDialog({
       toast.error('Label and host are required');
       return;
     }
-    if (form.isVpnRequired && !form.vpnFileContent) {
+    if (isRdp && form.isVpnRequired && !form.vpnFileContent) {
       toast.error('A VPN file is required when VPN is required');
       return;
     }
@@ -125,21 +126,22 @@ export function ConnectionDialog({
         type: form.type,
         label: form.label,
         host: form.host,
-        port: form.port ? Number(form.port) : null,
-        username: form.username || null,
+        port: isRdp && form.port ? Number(form.port) : null,
+        username: isRdp ? form.username || null : null,
         password: form.password || null,
-        domain: form.domain || null,
+        domain: isRdp ? form.domain || null : null,
         notes: form.notes || null,
-        isVpnRequired: form.isVpnRequired,
-        vpn: form.isVpnRequired
-          ? {
-              fileName: form.vpnFileName,
-              fileContent: form.vpnFileContent,
-              username: form.vpnUsername || null,
-              password: form.vpnPassword || null,
-              encryptionKey: form.vpnEncryptionKey || null,
-            }
-          : null,
+        isVpnRequired: isRdp && form.isVpnRequired,
+        vpn:
+          isRdp && form.isVpnRequired
+            ? {
+                fileName: form.vpnFileName,
+                fileContent: form.vpnFileContent,
+                username: form.vpnUsername || null,
+                password: form.vpnPassword || null,
+                encryptionKey: form.vpnEncryptionKey || null,
+              }
+            : null,
       };
 
       if (isEdit && connection) {
@@ -187,7 +189,18 @@ export function ConnectionDialog({
             <Select
               value={form.type}
               onValueChange={(value) =>
-                setForm((f) => ({ ...f, type: value as ClientType }))
+                setForm((f) => ({
+                  ...f,
+                  type: value as ClientType,
+                  ...(value === 'RDP'
+                    ? {}
+                    : {
+                        isVpnRequired: false,
+                        port: '',
+                        username: '',
+                        domain: '',
+                      }),
+                }))
               }
             >
               <SelectTrigger id="type" className="w-full">
@@ -214,7 +227,7 @@ export function ConnectionDialog({
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className={isRdp ? 'grid grid-cols-2 gap-4' : 'grid gap-2'}>
             <div className="grid gap-2">
               <Label htmlFor="host">Host / ID</Label>
               <Input
@@ -229,40 +242,44 @@ export function ConnectionDialog({
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="port">Port</Label>
-              <Input
-                id="port"
-                type="number"
-                value={form.port}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, port: e.target.value }))
-                }
-              />
-            </div>
+            {isRdp && (
+              <div className="grid gap-2">
+                <Label htmlFor="port">Port</Label>
+                <Input
+                  id="port"
+                  type="number"
+                  value={form.port}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, port: e.target.value }))
+                  }
+                />
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={form.username}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, username: e.target.value }))
-                }
-              />
+          {isRdp && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={form.username}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, username: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="domain">Domain</Label>
+                <Input
+                  id="domain"
+                  value={form.domain}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, domain: e.target.value }))
+                  }
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="domain">Domain</Label>
-              <Input
-                id="domain"
-                value={form.domain}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, domain: e.target.value }))
-                }
-              />
-            </div>
-          </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <InputPassword
@@ -273,19 +290,21 @@ export function ConnectionDialog({
               }
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="isVpnRequired"
-              checked={form.isVpnRequired}
-              onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, isVpnRequired: checked === true }))
-              }
-            />
-            <Label htmlFor="isVpnRequired" className="font-normal">
-              Requires VPN to connect
-            </Label>
-          </div>
-          {form.isVpnRequired && (
+          {isRdp && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="isVpnRequired"
+                checked={form.isVpnRequired}
+                onCheckedChange={(checked) =>
+                  setForm((f) => ({ ...f, isVpnRequired: checked === true }))
+                }
+              />
+              <Label htmlFor="isVpnRequired" className="font-normal">
+                Requires VPN to connect
+              </Label>
+            </div>
+          )}
+          {isRdp && form.isVpnRequired && (
             <div className="flex flex-col gap-4 rounded-lg border border-foreground/10 p-3">
               <div className="grid gap-2">
                 <Label htmlFor="vpnFile">VPN configuration file</Label>

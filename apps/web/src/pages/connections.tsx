@@ -330,7 +330,7 @@ export default function ConnectionsPage() {
                 <CardHeader>
                   <CardTitle className="truncate">{connection.label}</CardTitle>
                   <CardAction className="flex items-center gap-1.5">
-                    {connection.isVpnRequired && (
+                    {connection.type === 'RDP' && connection.isVpnRequired && (
                       <Tooltip>
                         <TooltipTrigger
                           render={
@@ -362,10 +362,12 @@ export default function ConnectionsPage() {
                     {connection.host}
                     {connection.port ? `:${connection.port}` : ''}
                   </div>
-                  <div className="truncate">
-                    <span className="text-foreground/70">User:</span>{' '}
-                    {connection.username ?? '-'}
-                  </div>
+                  {connection.type === 'RDP' && (
+                    <div className="truncate">
+                      <span className="text-foreground/70">User:</span>{' '}
+                      {connection.username ?? '-'}
+                    </div>
+                  )}
                   <div className="truncate">
                     <span className="text-foreground/70">Last used:</span>{' '}
                     {connection.lastLaunchedAt
@@ -393,7 +395,7 @@ export default function ConnectionsPage() {
                       />
                       <TooltipContent>Copy password</TooltipContent>
                     </Tooltip>
-                    {connection.isVpnRequired && (
+                    {connection.type === 'RDP' && connection.isVpnRequired && (
                       <Tooltip>
                         <TooltipTrigger
                           render={
