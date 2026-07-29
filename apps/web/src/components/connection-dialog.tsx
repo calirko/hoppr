@@ -221,7 +221,10 @@ export function ConnectionDialog({
                 id="host"
                 value={form.host}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, host: e.target.value }))
+                  setForm((f) => ({
+                    ...f,
+                    host: e.target.value.replace(/\s/g, ''),
+                  }))
                 }
                 required
               />

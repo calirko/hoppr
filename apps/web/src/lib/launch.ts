@@ -10,16 +10,17 @@ function buildRdpFile(connection: Connection): string {
 }
 
 export function launchConnection(connection: Connection): void {
+  const host = connection.host.replace(/\s/g, '');
   switch (connection.type) {
     case 'ANYDESK': {
-      window.location.href = `anydesk://${connection.host}`;
+      window.location.href = `anydesk://${host}`;
       return;
     }
     case 'RUSTDESK': {
       const params = connection.username
         ? `?username=${encodeURIComponent(connection.username)}`
         : '';
-      window.location.href = `rustdesk://${connection.host}${params}`;
+      window.location.href = `rustdesk://${host}${params}`;
       return;
     }
     case 'RDP': {
