@@ -20,30 +20,43 @@ model User {
   name         String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  connections  Connection[]
-  sessions     UserSession[]
-  apiKeys      ApiKey[]
+  connections       Connection[]
+  connectionLaunches ConnectionLaunch[]
+  sessions          UserSession[]
+  apiKeys           ApiKey[]
 }
 
 model Connection {
+  id            String           @id @default(cuid())
+  createdById   String
+  createdBy     User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  type          ClientType
+  label         String
+  host          String
+  port          Int?
+  username      String?
+  password      String?
+  domain        String?
+  notes         String?
+  isVpnRequired Boolean          @default(false)
+  vpn           Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  launches      ConnectionLaunch[]
+
+  @@index([createdById])
+}
+
+model ConnectionLaunch {
   id             String     @id @default(cuid())
   userId         String
   user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type           ClientType
-  label          String
-  host           String
-  port           Int?
-  username       String?
-  password       String?
-  domain         String?
-  notes          String?
-  isVpnRequired  Boolean    @default(false)
-  vpn            Json?
-  lastLaunchedAt DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  connectionId   String
+  connection     Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  lastLaunchedAt DateTime
 
-  @@index([userId])
+  @@unique([userId, connectionId])
+  @@index([connectionId])
 }
 
 model UserSession {

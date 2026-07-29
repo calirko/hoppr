@@ -10,7 +10,7 @@ export interface VpnConfig {
 
 export interface Connection {
   id: string;
-  userId: string;
+  createdById: string;
   type: ClientType;
   label: string;
   host: string;

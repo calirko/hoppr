@@ -104,21 +104,32 @@ export default function ConnectionsPage() {
 
   const filteredConnections = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
-    if (!query) return connections;
-    return connections.filter((connection) => {
-      const haystack = [
-        connection.label,
-        connection.host,
-        connection.username,
-        connection.domain,
-        connection.notes,
-        connection.port?.toString(),
-        TYPE_LABEL[connection.type],
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(query);
+    const filtered = query
+      ? connections.filter((connection) => {
+          const haystack = [
+            connection.label,
+            connection.host,
+            connection.username,
+            connection.domain,
+            connection.notes,
+            connection.port?.toString(),
+            TYPE_LABEL[connection.type],
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(query);
+        })
+      : connections;
+
+    return [...filtered].sort((a, b) => {
+      if (!a.lastLaunchedAt && !b.lastLaunchedAt) return 0;
+      if (!a.lastLaunchedAt) return 1;
+      if (!b.lastLaunchedAt) return -1;
+      return (
+        new Date(b.lastLaunchedAt).getTime() -
+        new Date(a.lastLaunchedAt).getTime()
+      );
     });
   }, [connections, debouncedSearch]);
 
