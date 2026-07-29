@@ -1,15 +1,33 @@
-import { Button } from '@/components/ui/button';
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from 'react-router-dom';
+import { AppLayout } from '@/components/app-layout';
+import { AuthGuard } from '@/components/auth-guard';
+import ConnectionsPage from '@/pages/connections';
+import LoginPage from '@/pages/login';
+import UsersPage from '@/pages/users';
+
+const router = createBrowserRouter([
+  { index: true, element: <Navigate to="/connections" replace /> },
+  { path: '/login', element: <LoginPage /> },
+  {
+    element: <AuthGuard />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { path: '/connections', element: <ConnectionsPage /> },
+          { path: '/users', element: <UsersPage /> },
+        ],
+      },
+    ],
+  },
+]);
 
 function App() {
-  return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">Hoppr</h1>
-      <p className="text-muted-foreground">
-        Manage your AnyDesk, RustDesk, and RDP connections.
-      </p>
-      <Button>Add connection</Button>
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

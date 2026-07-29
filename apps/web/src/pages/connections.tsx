@@ -1,0 +1,297 @@
+import {
+  CopyIcon,
+  DesktopIcon,
+  DesktopTowerIcon,
+  DotsThreeIcon,
+  MonitorIcon,
+  PencilIcon,
+  PlugIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ConnectionDialog } from '@/components/connection-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { VpnDialog } from '@/components/vpn-dialog';
+import { apiFetch } from '@/lib/api';
+import { launchConnection } from '@/lib/launch';
+import type { Connection } from '@/lib/types';
+
+const TYPE_LABEL: Record<Connection['type'], string> = {
+  ANYDESK: 'AnyDesk',
+  RUSTDESK: 'RustDesk',
+  RDP: 'RDP',
+};
+
+const TYPE_ICON: Record<Connection['type'], typeof DesktopIcon> = {
+  ANYDESK: DesktopIcon,
+  RUSTDESK: DesktopTowerIcon,
+  RDP: MonitorIcon,
+};
+
+export default function ConnectionsPage() {
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Connection | null>(null);
+  const [deleting, setDeleting] = useState<Connection | null>(null);
+  const [viewingVpn, setViewingVpn] = useState<Connection | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const items = await apiFetch<Connection[]>('/connections');
+      setConnections(items);
+    } catch (error) {
+      toast.error('Failed to load connections', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
+  useEffect(() => {
+    load();
+  }, []);
+
+  function openCreate() {
+    setEditing(null);
+    setDialogOpen(true);
+  }
+
+  function openEdit(connection: Connection) {
+    setEditing(connection);
+    setDialogOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!deleting) return;
+    try {
+      await apiFetch(`/connections/${deleting.id}`, { method: 'DELETE' });
+      toast.success('Connection deleted');
+      setDeleting(null);
+      load();
+    } catch (error) {
+      toast.error('Failed to delete connection', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  async function connect(connection: Connection) {
+    try {
+      await apiFetch(`/connections/${connection.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ lastLaunchedAt: new Date().toISOString() }),
+      });
+      load();
+    } catch (error) {
+      toast.error('Failed to launch connection', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    launchConnection(connection);
+  }
+
+  async function copyPassword(connection: Connection) {
+    if (!connection.password) {
+      toast.error('No password saved for this connection');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(connection.password);
+      toast.success('Password copied to clipboard');
+    } catch (error) {
+      toast.error('Failed to copy password', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl">Connections</h1>
+          <p className="text-sm text-muted-foreground">
+            Saved remote-access endpoints you can launch.
+          </p>
+        </div>
+        {/*<Button onClick={openCreate}>
+          <PlusIcon />
+          New connection
+        </Button>*/}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <button
+          type="button"
+          onClick={openCreate}
+          className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-foreground/15 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+        >
+          <PlusIcon size={28} />
+          <span className="text-sm font-medium">New connection</span>
+        </button>
+
+        {!loading &&
+          connections.map((connection) => {
+            const TypeIcon = TYPE_ICON[connection.type];
+            return (
+              <Card key={connection.id} className="min-h-40">
+                <CardHeader>
+                  <CardTitle className="truncate">{connection.label}</CardTitle>
+                  <CardAction className="flex items-center gap-1.5">
+                    {connection.isVpnRequired && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <span className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                              <ShieldCheckIcon size={16} />
+                            </span>
+                          }
+                        />
+                        <TooltipContent>Requires VPN</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <span className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                            <TypeIcon size={16} />
+                          </span>
+                        }
+                      />
+                      <TooltipContent>
+                        {TYPE_LABEL[connection.type]}
+                      </TooltipContent>
+                    </Tooltip>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex flex-1 flex-col gap-1 text-sm text-muted-foreground">
+                  <div className="truncate">
+                    <span className="text-foreground/70">Host:</span>{' '}
+                    {connection.host}
+                    {connection.port ? `:${connection.port}` : ''}
+                  </div>
+                  <div className="truncate">
+                    <span className="text-foreground/70">User:</span>{' '}
+                    {connection.username ?? '-'}
+                  </div>
+                  <div className="truncate">
+                    <span className="text-foreground/70">Last used:</span>{' '}
+                    {connection.lastLaunchedAt
+                      ? new Date(connection.lastLaunchedAt).toLocaleString()
+                      : 'Never'}
+                  </div>
+                </CardContent>
+                <CardFooter className="justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={() => connect(connection)}>
+                      <PlugIcon />
+                      Connect
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            onClick={() => copyPassword(connection)}
+                          >
+                            <CopyIcon size={16} />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent>Copy password</TooltipContent>
+                    </Tooltip>
+                    {connection.isVpnRequired && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              onClick={() => setViewingVpn(connection)}
+                            >
+                              <ShieldCheckIcon size={16} />
+                            </Button>
+                          }
+                        />
+                        <TooltipContent>VPN details</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button variant="ghost" size="icon-sm">
+                          <DotsThreeIcon size={18} />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(connection)}>
+                        <PencilIcon />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setDeleting(connection)}
+                      >
+                        <TrashIcon />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardFooter>
+              </Card>
+            );
+          })}
+      </div>
+
+      <ConnectionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        connection={editing}
+        onSaved={load}
+      />
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete connection"
+        description={`This will permanently delete "${deleting?.label}". This cannot be undone.`}
+        onConfirm={confirmDelete}
+      />
+      <VpnDialog
+        open={Boolean(viewingVpn)}
+        onOpenChange={(open) => !open && setViewingVpn(null)}
+        connection={viewingVpn}
+      />
+    </div>
+  );
+}

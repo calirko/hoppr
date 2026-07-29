@@ -8,6 +8,7 @@
     "dev:web": "bun --cwd apps/web run dev",
     "dev:server": "bun --cwd apps/server run dev",
     "build:web": "bun --cwd apps/web run build",
+    "build:server": "bun --cwd apps/server run build",
     "lint": "bun --cwd apps/web run lint",
     "db:generate": "bun --cwd apps/server run db:generate",
     "db:migrate": "bun --cwd apps/server run db:migrate",

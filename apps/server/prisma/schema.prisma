@@ -35,6 +35,8 @@ model Connection {
   password       String?
   domain         String?
   notes          String?
+  isVpnRequired  Boolean    @default(false)
+  vpn            Json?
   lastLaunchedAt DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
