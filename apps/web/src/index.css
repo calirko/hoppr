@@ -118,6 +118,24 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@keyframes highlight-blink {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--ring) 0%, transparent);
+  }
+  25%,
+  75% {
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--ring) 60%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--ring) 0%, transparent);
+  }
+}
+
+.animate-highlight-blink {
+  animation: highlight-blink 1050ms ease-in-out 2;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

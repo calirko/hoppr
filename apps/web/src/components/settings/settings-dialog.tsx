@@ -13,7 +13,7 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+      <DialogContent className="gap-0 p-0 sm:max-w-[60vw] sm:max-h-[70vh] sm:min-h-[70vh]">
         <Tabs
           orientation="vertical"
           defaultValue="appearance"
@@ -36,7 +36,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </TabsTrigger>
             </TabsList>
           </div>
-          <div className="max-h-[28rem] min-h-72 flex-1 overflow-y-auto p-4">
+          <div className="max-h-[28rem] pt-10 min-h-72 flex-1 overflow-y-auto p-4">
             <TabsContent value="appearance">
               <AppearanceTab />
             </TabsContent>

@@ -8,11 +8,13 @@ import {
   PencilIcon,
   PlugIcon,
   PlusIcon,
+  ShareNetworkIcon,
   ShieldCheckIcon,
   TrashIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionDialog } from '@/components/connection-dialog';
@@ -40,6 +42,7 @@ import {
 import { VpnDialog } from '@/components/vpn-dialog';
 import { apiFetch } from '@/lib/api';
 import { launchConnection } from '@/lib/launch';
+import { getAutoCopyPassword } from '@/lib/settings';
 import type { Connection } from '@/lib/types';
 
 const SEARCH_DEBOUNCE_MS = 200;
@@ -56,6 +59,9 @@ const TYPE_ICON: Record<Connection['type'], typeof DesktopIcon> = {
   RDP: MonitorIcon,
 };
 
+const HIGHLIGHT_PARAM = 'highlight';
+const HIGHLIGHT_DURATION_MS = 2100;
+
 export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +71,11 @@ export default function ConnectionsPage() {
   const [viewingVpn, setViewingVpn] = useState<Connection | null>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const hasAppliedHighlightRef = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAnyDialogOpen =
     dialogOpen || Boolean(deleting) || Boolean(viewingVpn);
 
@@ -122,15 +132,9 @@ export default function ConnectionsPage() {
         })
       : connections;
 
-    return [...filtered].sort((a, b) => {
-      if (!a.lastLaunchedAt && !b.lastLaunchedAt) return 0;
-      if (!a.lastLaunchedAt) return 1;
-      if (!b.lastLaunchedAt) return -1;
-      return (
-        new Date(b.lastLaunchedAt).getTime() -
-        new Date(a.lastLaunchedAt).getTime()
-      );
-    });
+    return [...filtered].sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
+    );
   }, [connections, debouncedSearch]);
 
   async function load() {
@@ -151,6 +155,47 @@ export default function ConnectionsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (loading || hasAppliedHighlightRef.current) return;
+    const targetId = searchParams.get(HIGHLIGHT_PARAM);
+    if (!targetId) return;
+    const card = cardRefs.current.get(targetId);
+    if (!card) return;
+
+    hasAppliedHighlightRef.current = true;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedId(targetId);
+
+    const clearTimer = setTimeout(() => {
+      setHighlightedId(null);
+    }, HIGHLIGHT_DURATION_MS);
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(HIGHLIGHT_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+
+    return () => clearTimeout(clearTimer);
+  }, [loading, searchParams, setSearchParams]);
+
+  async function shareConnection(connection: Connection) {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.searchParams.set(HIGHLIGHT_PARAM, connection.id);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      toast.success('Share link copied to clipboard');
+    } catch (error) {
+      toast.error('Failed to copy share link', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -177,6 +222,15 @@ export default function ConnectionsPage() {
   }
 
   async function connect(connection: Connection) {
+    if (getAutoCopyPassword() && connection.password) {
+      try {
+        await navigator.clipboard.writeText(connection.password);
+      } catch (error) {
+        toast.error('Failed to copy password', {
+          description: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     try {
       await apiFetch(`/connections/${connection.id}`, {
         method: 'PATCH',
@@ -261,7 +315,18 @@ export default function ConnectionsPage() {
           filteredConnections.map((connection) => {
             const TypeIcon = TYPE_ICON[connection.type];
             return (
-              <Card key={connection.id} className="min-h-40">
+              <Card
+                key={connection.id}
+                ref={(el) => {
+                  if (el) cardRefs.current.set(connection.id, el);
+                  else cardRefs.current.delete(connection.id);
+                }}
+                className={
+                  highlightedId === connection.id
+                    ? 'min-h-40 animate-highlight-blink'
+                    : 'min-h-40'
+                }
+              >
                 <CardHeader>
                   <CardTitle className="truncate">{connection.label}</CardTitle>
                   <CardAction className="flex items-center gap-1.5">
@@ -357,6 +422,12 @@ export default function ConnectionsPage() {
                       <DropdownMenuItem onClick={() => openEdit(connection)}>
                         <PencilIcon />
                         Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => shareConnection(connection)}
+                      >
+                        <ShareNetworkIcon />
+                        Share
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
