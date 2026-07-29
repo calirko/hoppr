@@ -1,34 +1,19 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: hoppr
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hoppr}
-      POSTGRES_DB: hoppr
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hoppr"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   server:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
     container_name: hoppr-server
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://hoppr:${POSTGRES_PASSWORD:-hoppr}@postgres:5432/hoppr?schema=public
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before running docker compose}
-    depends_on:
-      postgres:
-        condition: service_healthy
+    networks:
+      hoppr_network: {}
+      web_network:
+        aliases:
+          - hoppr-server
     restart: unless-stopped
     deploy:
       resources:
@@ -52,6 +37,11 @@ services:
       NODE_ENV: production
     ports:
       - "8080:80"
+    networks:
+      hoppr_network: {}
+      web_network:
+        aliases:
+          - hoppr-web
     depends_on:
       server:
         condition: service_healthy
@@ -63,5 +53,10 @@ services:
       retries: 3
       start_period: 15s
 
-volumes:
-  postgres-data:
+networks:
+  hoppr_network:
+    driver: bridge
+    name: hoppr_network
+  web_network:
+    external: true
+    name: mkserver-shared
