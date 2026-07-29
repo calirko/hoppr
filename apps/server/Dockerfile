@@ -14,7 +14,7 @@ COPY apps/server ./apps/server
 RUN cd apps/server && bunx prisma generate
 
 RUN cd apps/server && bun run build \
-    && bun install --production --cwd apps/server
+    && bun install --production
 
 # Production stage
 FROM oven/bun:1.3.14-slim
