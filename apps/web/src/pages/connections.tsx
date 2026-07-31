@@ -1,7 +1,5 @@
 import {
   CopyIcon,
-  DesktopIcon,
-  DesktopTowerIcon,
   DotsThreeIcon,
   MagnifyingGlassIcon,
   MonitorIcon,
@@ -13,11 +11,14 @@ import {
   TrashIcon,
   XIcon,
 } from '@phosphor-icons/react';
+import type { ComponentType } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionDialog } from '@/components/connection-dialog';
+import { AnyDeskIcon } from '@/components/icons/anydesk-icon';
+import { RustDeskIcon } from '@/components/icons/rustdesk-icon';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -53,9 +54,12 @@ const TYPE_LABEL: Record<Connection['type'], string> = {
   RDP: 'RDP',
 };
 
-const TYPE_ICON: Record<Connection['type'], typeof DesktopIcon> = {
-  ANYDESK: DesktopIcon,
-  RUSTDESK: DesktopTowerIcon,
+const TYPE_ICON: Record<
+  Connection['type'],
+  ComponentType<{ size?: number; className?: string }>
+> = {
+  ANYDESK: AnyDeskIcon,
+  RUSTDESK: RustDeskIcon,
   RDP: MonitorIcon,
 };
 
@@ -437,20 +441,22 @@ export default function ConnectionsPage() {
                       <PlugIcon />
                       Connect
                     </Button>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            onClick={() => copyPassword(connection)}
-                          >
-                            <CopyIcon size={16} />
-                          </Button>
-                        }
-                      />
-                      <TooltipContent>Copy password</TooltipContent>
-                    </Tooltip>
+                    {
+                      connection.password && <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              onClick={() => copyPassword(connection)}
+                            >
+                              <CopyIcon size={16} />
+                            </Button>
+                          }
+                        />
+                        <TooltipContent>Copy password</TooltipContent>
+                      </Tooltip>
+                    }
                     {connection.type === 'RDP' && connection.isVpnRequired && (
                       <Tooltip>
                         <TooltipTrigger
